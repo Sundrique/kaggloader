@@ -2,12 +2,16 @@ import getpass
 import os
 
 import mechanize
+from bs4 import BeautifulSoup
 
 
 class KaggLoader(mechanize.Browser, object):
     BASE_DIR = 'kaggloader'
     COOKIE_FILE_NAME = '.cookies'
     COOKIE_PATH = os.path.join(BASE_DIR, COOKIE_FILE_NAME)
+    HOST_NAME = 'www.kaggle.com'
+    PROTOCOL = 'https'
+    BASE_URL = PROTOCOL + '://' + HOST_NAME
 
     def __init__(self):
         super(KaggLoader, self).__init__()
@@ -33,13 +37,13 @@ class KaggLoader(mechanize.Browser, object):
         self.set_cookiejar(self.cj)
 
     def get_url(self, competition, file):
-        return 'https://www.kaggle.com/c/' + competition + '/download/' + file
+        return self.BASE_URL + '/c/' + competition + '/download/' + file
 
     def rules_not_accepted(self):
         return self.geturl()[-6:] == '/rules'
 
     def not_logged_in(self):
-        return self.geturl().find('https://www.kaggle.com/account/login') == 0
+        return self.geturl().find(self.BASE_URL + '/account/login') == 0
 
     def is_login_form(self, form):
         return form.attrs.get('method') == 'post' and form.action.find('/login.php') != -1
@@ -63,10 +67,10 @@ class KaggLoader(mechanize.Browser, object):
 
         if self.not_logged_in():
             self.login_via_fb()
-            self.download(file_name)
+            self.download(competition, file_name)
         elif self.rules_not_accepted():
             self.accept_rules()
-            self.download(file_name)
+            self.download(competition, file_name)
         else:
             dir = os.path.join(self.BASE_DIR, competition)
             if not os.path.exists(dir):
@@ -75,7 +79,19 @@ class KaggLoader(mechanize.Browser, object):
             with open(os.path.join(dir, file_name), 'wb') as f:
                 f.write(response.read())
 
+    def download_all(self, competition):
+        for file in self.get_files(competition):
+            self.download(competition, file)
+
     def open(self, url):
         response = super(KaggLoader, self).open(url)
         self.cj.save(self.COOKIE_PATH, ignore_discard=False, ignore_expires=False)
         return response
+
+    def get_files(self, competition):
+        self.open(self.BASE_URL + '/c/' + competition + '/data')
+
+        soup = BeautifulSoup(self.response().read(), "html.parser")
+
+        for anchor in soup.find('table', id='data-files').find_all('a'):
+            yield anchor['href'].replace('/c/' + competition + '/download/', '')
