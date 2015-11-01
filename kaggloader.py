@@ -1,8 +1,9 @@
-import getpass
 import os
 
-import mechanize
 from bs4 import BeautifulSoup
+
+import login
+import mechanize
 
 
 class KaggLoader(mechanize.Browser, object):
@@ -13,14 +14,13 @@ class KaggLoader(mechanize.Browser, object):
     PROTOCOL = 'https'
     BASE_URL = PROTOCOL + '://' + HOST_NAME
 
-    def __init__(self):
+    def __init__(self, login=login.facebook):
         super(KaggLoader, self).__init__()
+
+        self.login = login
 
         self.set_handle_equiv(True)
         self.set_handle_robots(False)
-
-        self.addheaders = [('User-Agent',
-                            'Mozilla/5.0 (iPhone; CPU iPhone OS 8_1 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Version/8.0 Mobile/12B410 Safari/600.1.4')]
 
         if not os.path.exists(self.BASE_DIR):
             os.makedirs(self.BASE_DIR)
@@ -45,9 +45,6 @@ class KaggLoader(mechanize.Browser, object):
     def not_logged_in(self):
         return self.geturl().find(self.BASE_URL + '/account/login') == 0
 
-    def is_login_form(self, form):
-        return form.attrs.get('method') == 'post' and form.action.find('/login.php') != -1
-
     def is_accept_rules_form(self, form):
         return form.action[-13:] == '/rules/accept'
 
@@ -55,18 +52,11 @@ class KaggLoader(mechanize.Browser, object):
         self.select_form(predicate=self.is_accept_rules_form)
         self.submit()
 
-    def login_via_fb(self):
-        self.follow_link(url_regex=r"facebook", nr=1)
-        self.select_form(predicate=self.is_login_form)
-        self.form['email'] = raw_input("Email: ")
-        self.form['pass'] = getpass.getpass()
-        self.submit()
-
     def download(self, competition, file_name):
         response = self.open(self.get_url(competition, file_name))
 
         if self.not_logged_in():
-            self.login_via_fb()
+            self.login(self)
             self.download(competition, file_name)
         elif self.rules_not_accepted():
             self.accept_rules()
