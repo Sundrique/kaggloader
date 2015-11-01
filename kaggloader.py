@@ -78,6 +78,10 @@ class KaggLoader(mechanize.Browser, object):
         self.cj.save(self.COOKIE_PATH, ignore_discard=False, ignore_expires=False)
         return response
 
+    def submit(self, *args, **kwds):
+        self.request = None
+        return self.open(self.click(*args, **kwds))
+
     def get_files(self, competition):
         self.open(self.BASE_URL + '/c/' + competition + '/data')
 
