@@ -8,11 +8,8 @@ import mechanize
 
 class KaggLoader(mechanize.Browser, object):
     BASE_DIR = 'kaggloader'
-    COOKIE_FILE_NAME = '.cookies'
-    COOKIE_PATH = os.path.join(BASE_DIR, COOKIE_FILE_NAME)
-    HOST_NAME = 'www.kaggle.com'
-    PROTOCOL = 'https'
-    BASE_URL = PROTOCOL + '://' + HOST_NAME
+    COOKIE_PATH = os.path.join(BASE_DIR, '.cookies')
+    BASE_URL = 'https://www.kaggle.com'
 
     def __init__(self, login=login.facebook):
         super(KaggLoader, self).__init__()
